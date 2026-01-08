@@ -4,6 +4,10 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { queue } from '@/lib/store'; // <--- Importamos el almacén
 
+// app/api/chat/route.ts
+export const maxDuration = 30; // Permitir hasta 30 segundos de ejecución
+
+
 // Definimos el esquema de respuesta
 const responseSchema = z.object({
   explanation: z.string().describe("Explanation for the user in the web chat"),
