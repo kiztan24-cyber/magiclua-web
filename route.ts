@@ -1,6 +1,8 @@
-// app/api/queue/route.ts
 import { NextResponse } from 'next/server';
 import { queue } from '@/lib/store';
+
+// Evita que Next.js cachee esta ruta (Importante para plugins)
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -10,10 +12,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'User ID required' }, { status: 400 });
   }
 
-  // Buscamos si hay código para este usuario
   const pendingCode = queue.get(userId);
 
   return NextResponse.json({
-    code: pendingCode || "none" // Si no hay nada, devolvemos "none"
+    code: pendingCode || "none"
   });
 }

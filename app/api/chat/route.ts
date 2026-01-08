@@ -1,46 +1,65 @@
-// app/api/chat/route.ts
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { queue } from '@/lib/store'; // <--- Importamos el almacén
+import { queue } from '@/lib/store'; // <--- OJO AQUÍ
 
-// app/api/chat/route.ts
-export const maxDuration = 30; // Permitir hasta 30 segundos de ejecución
+// Configuración para Vercel
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
 
-
-// Definimos el esquema de respuesta
 const responseSchema = z.object({
-  explanation: z.string().describe("Explanation for the user in the web chat"),
-  lua_code: z.string().describe("The functional Lua code for Roblox Studio"),
-  action_type: z.enum(['create', 'modify', 'delete', 'none']).describe("Type of action"),
+  explanation: z.string(),
+  lua_code: z.string(),
 });
 
 export async function POST(req: Request) {
-  const { messages, userId } = await req.json(); // <--- Ahora esperamos recibir el userId del chat
+  try {
+    const body = await req.json();
+    const { messages, userId } = body;
+    const targetUser = userId || "default";
 
-  // Usamos un ID por defecto si no viene ninguno (para pruebas)
-  const targetUser = userId || "default";
+    // 1. Verificación básica
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      throw new Error("Falta la API Key de Google en las variables de entorno");
+    }
 
-  const result = await generateObject({
-    model: google('gemini-1.5-flash', {
-      apiKey: "AIzaSyD34EaQiHfOmQUWCdZyEk4KO-1Nfxb95TU"
-  }) as any,
-  schema: responseSchema,
-    system: `You are MagicLua, an expert Roblox Luau Assistant.
-    Your goal is to help the user build inside Roblox Studio.
-    ALWAYS return valid Lua code compatible with Roblox.
-    If the user asks for something complex, break it down.
-    IMPORTANT: Do not use markdown blocks in the 'lua_code' field. Just raw code.`,
-    messages,
-  });
+    // 2. Intentamos generar con la IA
+    const result = await generateObject({
+      model: google('gemini-1.5-flash') as any,
+      schema: responseSchema,
+      messages,
+      system: `You are a Roblox Lua expert. Return valid code only.`,
+    });
 
-  const { object } = result;
+    const { object } = result;
 
-  // Si la IA generó código, lo guardamos en el buzón para el plugin
-  if (object.lua_code && object.lua_code !== 'none') {
-    queue.add(targetUser, object.lua_code);
+    // 3. Intentamos guardar en la cola
+    try {
+      if (object.lua_code && object.lua_code !== 'none') {
+        // Verificamos si la cola existe antes de usarla
+        if (queue) {
+            queue.add(targetUser, object.lua_code);
+        } else {
+            console.error("Error: El objeto 'queue' es undefined. Revisa la importación.");
+        }
+      }
+    } catch (queueError) {
+      console.error("Error guardando en cola:", queueError);
+      // No detenemos el chat si falla la cola, solo avisamos
+    }
+
+    return result.toJsonResponse();
+
+  } catch (error: any) {
+    // AQUÍ ESTÁ LA CLAVE: Devolvemos el error al chat para que lo leas
+    console.error("Error FATAL en chat:", error);
+    
+    return new Response(JSON.stringify({
+      explanation: `❌ ERROR DEL SISTEMA: ${error.message}`,
+      lua_code: "none"
+    }), {
+      status: 200, // Devolvemos 200 para que el frontend muestre el mensaje de error
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
-
-  // Devolvemos la respuesta al chat para que el usuario la lea
-  return result.toJsonResponse();
 }
