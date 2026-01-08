@@ -22,8 +22,10 @@ export async function POST(req: Request) {
   const targetUser = userId || "default";
 
   const result = await generateObject({
-    model: google('gemini-1.5-flash') as any,
-    schema: responseSchema,
+    model: google('gemini-1.5-flash', {
+      apiKey: "AIzaSyD34EaQiHfOmQUWCdZyEk4KO-1Nfxb95TU"
+  }) as any,
+  schema: responseSchema,
     system: `You are MagicLua, an expert Roblox Luau Assistant.
     Your goal is to help the user build inside Roblox Studio.
     ALWAYS return valid Lua code compatible with Roblox.
