@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const result = await generateObject({
-    model: google('gemini-1.5-flash'), // Modelo gratis y rápido
+     model: google('gemini-1.5-flash') as any, // <--- AQUI ESTA EL TRUCO
     schema: responseSchema,
     system: `You are MagicLua, an expert Roblox Luau Assistant.
     Your goal is to help the user build inside Roblox Studio.
