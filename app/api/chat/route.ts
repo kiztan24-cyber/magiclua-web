@@ -1,7 +1,11 @@
 // app/api/chat/route.ts
-import { queue } from '@/lib/store'; 
-// IMPORTANTE: Si te da error en la línea de arriba, cámbiala a:
-// import { queue } from '@/app/lib/store';
+
+// 1. Definimos la cola AQUÍ MISMO (Truco sucio pero efectivo)
+// Usamos globalThis para que sobreviva entre llamadas en caliente
+declare global {
+  var _internalQueue: Record<string, string> | undefined;
+}
+globalThis._internalQueue = globalThis._internalQueue || {};
 
 export const dynamic = 'force-dynamic';
 
@@ -11,35 +15,26 @@ export async function POST(req: Request) {
     const { userId } = body;
     const targetUser = userId || "default";
     
-    // Código de prueba fijo
     const mockCode = `
       local p = Instance.new("Part")
-      p.Name = "CuboMagico_" .. math.random(1000)
-      p.Color = Color3.new(0, 1, 0) -- Verde
-      p.Position = Vector3.new(0, 20, 0)
-      p.Anchored = true
+      p.Name = "DirectPart"
+      p.Color = Color3.new(0, 0, 1) -- Azul
+      p.Position = Vector3.new(0, 15, 0)
       p.Parent = workspace
-      print("¡FUNCIONA! Conexión Web -> Roblox Exitosa")
     `;
 
-    // Intentamos guardar en la cola
-    if (queue) {
-        queue.add(targetUser, mockCode);
-        console.log("Código guardado para:", targetUser);
-    } else {
-        throw new Error("La base de datos (queue) no se encontró.");
-    }
+    // 2. Guardamos DIRECTAMENTE en la variable global
+    globalThis._internalQueue[targetUser] = mockCode;
 
     return Response.json({
-        explanation: "✅ CONEXIÓN EXITOSA. He enviado un cubo verde a Roblox.",
+        explanation: "✅ Guardado en memoria interna (Sin importaciones).",
         lua_code: mockCode
     });
 
   } catch (error: any) {
-    console.error("Error en chat:", error);
     return Response.json({
         explanation: "❌ ERROR: " + error.message,
         lua_code: "none"
-    }, { status: 200 }); // Devolvemos 200 para ver el error en pantalla
+    }, { status: 200 });
   }
 }
