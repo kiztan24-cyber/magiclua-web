@@ -1,51 +1,45 @@
-import { NextResponse } from 'next/server';
+// app/api/chat/route.ts
+import { queue } from '@/lib/store'; 
+// IMPORTANTE: Si te da error en la línea de arriba, cámbiala a:
+// import { queue } from '@/app/lib/store';
 
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
-import { z } from 'zod';
-import { queue } from '@/lib/store'; // OJO: Si moviste lib a root usa @/lib/store
-// Configuración para Vercel
-export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
-
-const responseSchema = z.object({
-  explanation: z.string(),
-  lua_code: z.string(),
-});
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, messages } = body;
+    const { userId } = body;
     const targetUser = userId || "default";
     
-    // Simulación de IA (Para probar conexión)
+    // Código de prueba fijo
     const mockCode = `
       local p = Instance.new("Part")
-      p.Name = "MagicPart_" .. math.random(100)
-      p.Color = Color3.new(1, 0, 0)
-      p.Position = Vector3.new(0, 10, 0)
+      p.Name = "CuboMagico_" .. math.random(1000)
+      p.Color = Color3.new(0, 1, 0) -- Verde
+      p.Position = Vector3.new(0, 20, 0)
+      p.Anchored = true
       p.Parent = workspace
-      print("¡MagicLua funciona!")
+      print("¡FUNCIONA! Conexión Web -> Roblox Exitosa")
     `;
 
-    // Guardar en cola
+    // Intentamos guardar en la cola
     if (queue) {
         queue.add(targetUser, mockCode);
+        console.log("Código guardado para:", targetUser);
     } else {
-        throw new Error("Queue no está definida");
+        throw new Error("La base de datos (queue) no se encontró.");
     }
 
-    // Responder al chat simulando ser la IA
-    return NextResponse.json({
-        explanation: "¡Conexión de prueba exitosa! He creado una parte roja.",
+    return Response.json({
+        explanation: "✅ CONEXIÓN EXITOSA. He enviado un cubo verde a Roblox.",
         lua_code: mockCode
     });
 
   } catch (error: any) {
-    return NextResponse.json({
-        explanation: "Error en servidor: " + error.message,
+    console.error("Error en chat:", error);
+    return Response.json({
+        explanation: "❌ ERROR: " + error.message,
         lua_code: "none"
-    }, { status: 500 });
+    }, { status: 200 }); // Devolvemos 200 para ver el error en pantalla
   }
 }

@@ -4,80 +4,48 @@ import { useChat } from 'ai/react';
 import { useState } from 'react';
 
 export default function Chat() {
-  // Estado para el ID de sesión (por defecto 'default')
   const [userId, setUserId] = useState('default');
 
-  // Pasamos el userId en el body de CADA petición
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    body: {
-      userId: userId
-    }
+    body: { userId: userId } // ¡ESTO ES LO QUE FALTABA!
   });
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-white font-sans">
-      {/* Header con Configuración */}
-      <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shadow-md">
-        <div className="flex items-center gap-3">
-           <h1 className="text-xl font-bold text-yellow-400 tracking-tight">★ MagicLua</h1>
-           <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded tracking-wider">Brain v2.0</span>
+      <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+        <div className="flex items-center gap-2">
+           <h1 className="text-xl font-bold text-yellow-400">★ MagicLua</h1>
         </div>
-        
-        <div className="flex items-center gap-3 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
-            <span className="text-xs text-slate-400 font-medium pl-2">SESSION ID:</span>
+        <div className="flex items-center gap-2 bg-slate-800 p-1 rounded border border-slate-700">
+            <span className="text-xs text-slate-400 pl-2">ID:</span>
             <input 
-                className="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white w-28 focus:border-yellow-500 outline-none font-mono text-center"
-                value={userId}
+                className="bg-slate-900 text-white text-xs p-1 w-24 text-center outline-none" 
+                value={userId} 
                 onChange={(e) => setUserId(e.target.value)}
-                placeholder="default"
             />
-            <div className={`w-2.5 h-2.5 rounded-full mx-1 ${isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'}`} title={isLoading ? "Thinking..." : "Ready"} />
         </div>
       </header>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-slate-600">
-                <p className="text-sm">Conecta tu plugin de Roblox Studio usando este ID:</p>
-                <code className="bg-slate-900 border border-slate-700 px-4 py-2 rounded text-yellow-500 text-xl mt-3 font-mono cursor-pointer hover:bg-slate-800 transition-colors">{userId}</code>
-            </div>
-        )}
-        
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(m => {
-           // Intentar renderizar bonito si es JSON
            let content = m.content;
            let code = null;
-           let isError = false;
-
            try {
-             // Si el asistente manda JSON
-             if (m.role === 'assistant' && m.content.trim().startsWith('{')) {
+             if (m.role === 'assistant' && m.content.startsWith('{')) {
                const data = JSON.parse(m.content);
-               content = data.explanation || "Procesando...";
+               content = data.explanation;
                code = data.lua_code;
-               if(content.includes("ERROR")) isError = true;
              }
-           } catch (e) {
-               // Si falla el parse, es texto normal
-           }
+           } catch (e) {}
 
            return (
              <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`max-w-[85%] p-4 rounded-xl shadow-sm ${m.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'}`}>
-                 <div className={`whitespace-pre-wrap text-sm leading-relaxed ${isError ? 'text-red-400 font-bold' : ''}`}>{content}</div>
-                 
+               <div className={`max-w-[85%] p-3 rounded-lg ${m.role === 'user' ? 'bg-blue-600' : 'bg-slate-800 border border-slate-700'}`}>
+                 <p className="whitespace-pre-wrap text-sm">{content}</p>
                  {code && code !== 'none' && (
-                   <div className="mt-4 bg-black rounded-lg border border-slate-700 overflow-hidden shadow-inner">
-                     <div className="bg-slate-900 px-3 py-1.5 text-[10px] text-slate-500 border-b border-slate-800 flex justify-between items-center font-mono uppercase tracking-wider">
-                        <span>Lua Script</span>
-                        <span className="text-green-500 flex items-center gap-1">
-                          Sent to Plugin <span className="text-xs">✓</span>
-                        </span>
-                     </div>
-                     <pre className="p-3 font-mono text-xs text-green-400 overflow-x-auto custom-scrollbar">
-                       {code}
-                     </pre>
+                   <div className="mt-2 bg-black p-2 rounded border border-slate-700">
+                     <div className="text-[10px] text-green-500 mb-1">CÓDIGO ENVIADO AL PLUGIN:</div>
+                     <pre className="text-xs text-green-300 font-mono overflow-x-auto">{code}</pre>
                    </div>
                  )}
                </div>
@@ -86,21 +54,14 @@ export default function Chat() {
         })}
       </div>
 
-      {/* Input Area */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-slate-800 bg-slate-900 flex gap-3 shadow-[0_-5px_15px_rgba(0,0,0,0.3)]">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2">
         <input
-          className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-all placeholder:text-slate-600 text-sm"
+          className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white"
           value={input}
           onChange={handleInputChange}
-          placeholder="Escribe tu comando mágico aquí..."
+          placeholder="Escribe algo..."
         />
-        <button 
-            type="submit" 
-            disabled={isLoading}
-            className="bg-yellow-500 text-black px-6 py-2 rounded-xl font-bold hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-yellow-500/20"
-        >
-          {isLoading ? '...' : 'Enviar'}
-        </button>
+        <button type="submit" className="bg-yellow-500 text-black px-4 py-2 rounded font-bold">Enviar</button>
       </form>
     </div>
   );
